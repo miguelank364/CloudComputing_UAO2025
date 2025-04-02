@@ -95,7 +95,7 @@ kubectl get ingress
 - Visualización interactiva de matrices de correlación
 - Simulación visual de redes ópticas
 
-## Autores
+## Contribución
 
 Desarrollado como proyecto para el curso de Cloud Computing en la Universidad Autónoma de Occidente (2025).
 
