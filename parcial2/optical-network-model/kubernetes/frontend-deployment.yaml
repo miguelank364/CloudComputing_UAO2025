@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: optical-network-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: optical-network-frontend
+  template:
+    metadata:
+      labels:
+        app: optical-network-frontend
+    spec:
+      containers:
+      - name: nginx
+        image: miguelank/optical-network-frontend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+      # r las siguiente líneas para repositorio privado
+      # imagePullSecrets:
+      # - name: regcred
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  selector:
+    app: optical-network-frontend
+  ports:
+  - port: 80
+    targetPort: 80
+  type: LoadBalancer

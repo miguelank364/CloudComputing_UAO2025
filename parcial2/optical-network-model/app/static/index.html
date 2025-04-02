@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Predictor de Tiempo de Respuesta - RNA</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+  <!-- Añadir D3.js -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+    
+    html, body {
+      height: 100%;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #333;
+      overflow-x: hidden;
+    }
+    
+    body {
+      background: #000;
+      padding: 20px;
+    }
+    
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: rgba(255, 255, 255, 0.9);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      position: relative;
+      z-index: 1;
+    }
+    
+    h1 {
+      color: #2c3e50;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #555;
+    }
+    
+    input[type="number"], select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    
+    button {
+      background-color: #3498db;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      display: block;
+      margin: 20px auto;
+      transition: background-color 0.3s;
+    }
+    
+    button:hover {
+      background-color: #2980b9;
+    }
+    
+    .result-container {
+      background-color: #f9f9f9;
+      padding: 15px;
+      border-radius: 5px;
+      margin-top: 30px;
+      border-left: 5px solid #3498db;
+    }
+    
+    .result-title {
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #2c3e50;
+    }
+    
+    .result-value {
+      font-size: 24px;
+      text-align: center;
+      padding: 10px;
+      background: #e8f4fc;
+      border-radius: 5px;
+      margin: 10px 0;
+    }
+    
+    .inference-time {
+      text-align: right;
+      font-size: 12px;
+      color: #7f8c8d;
+      margin-top: 10px;
+    }
+    
+    .two-columns {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    
+    .column {
+      flex: 1;
+    }
+    
+    @media (max-width: 650px) {
+      .two-columns {
+        flex-direction: column;
+        gap: 0;
+      }
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    /* Estilos para la matriz de correlación */
+    .correlation-container {
+      margin-top: 40px;
+      padding: 15px;
+      background-color: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .correlation-title {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #2c3e50;
+    }
+
+    .correlation-controls {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .matrix-container {
+      overflow-x: auto;
+    }
+    
+    .correlation-note {
+      font-size: 12px;
+      color: #7f8c8d;
+      text-align: center;
+      margin-top: 10px;
+    }
+    
+    .selected-point {
+      font-size: 14px;
+      margin: 20px 0;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 5px;
+      border-left: 4px solid #3498db;
+    }
+    
+    .tab-container {
+      display: flex;
+      margin-top: 30px;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      background: #f1f1f1;
+      border-radius: 5px 5px 0 0;
+      margin-right: 5px;
+      border: 1px solid #ddd;
+      border-bottom: none;
+    }
+    
+    .tab.active {
+      background: #fff;
+      border-bottom: 1px solid #fff;
+      margin-bottom: -1px;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" data-strokecolor="0,157,224"></canvas>
+  
+  <div class="container">
+    <h1>Predictor de Tiempo de Respuesta con RNA</h1>
+    
+    <!-- Tabs for navigation -->
+    <div class="tab-container">
+      <div class="tab active" data-tab="prediction">Predicción</div>
+      <div class="tab" data-tab="correlation">Correlaciones</div>
+    </div>
+    
+    <!-- Prediction Tab -->
+    <div id="prediction-tab" class="tab-content active">
+      <div class="two-columns">
+        <div class="column">
+          <div class="form-group">
+            <label for="nodeNumber">Node Number:</label>
+            <input type="number" id="nodeNumber" min="0" value="40">
+          </div>
+          
+          <div class="form-group">
+            <label for="threadNumber">Thread Number:</label>
+            <input type="number" id="threadNumber" min="0" value="7">
+          </div>
+          
+          <div class="form-group">
+            <label for="tr">T/R:</label>
+            <input type="number" id="tr" min="0" step="0.01" value="0.55">
+          </div>
+          
+          <div class="form-group">
+            <label for="processorUtilization">Processor Utilization:</label>
+            <input type="number" id="processorUtilization" min="0" max="1" step="0.01" value="0.65">
+          </div>
+        </div>
+        
+        <div class="column">
+          <div class="form-group">
+            <label for="channelWaitingTime">Channel Waiting Time:</label>
+            <input type="number" id="channelWaitingTime" min="0" value="300">
+          </div>
+          
+          <div class="form-group">
+            <label for="inputWaitingTime">Input Waiting Time:</label>
+            <input type="number" id="inputWaitingTime" min="0" value="250">
+          </div>
+          
+          <div class="form-group">
+            <label for="channelUtilization">Channel Utilization:</label>
+            <input type="number" id="channelUtilization" min="0" value="25">
+          </div>
+          
+          <div class="form-group">
+            <label for="spatialDistribution">Spatial Distribution:</label>
+            <select id="spatialDistribution">
+              <option value="UN">Uniform (UN)</option>
+              <option value="HR">Hierarchical (HR)</option>
+              <option value="BR">Bursty (BR)</option>
+              <option value="PS">Poisson (PS)</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="temporalDistribution">Temporal Distribution:</label>
+            <select id="temporalDistribution">
+              <option value="Client-Server">Client-Server</option>
+              <option value="Asynchronous">Asynchronous</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <button id="predictBtn">Calcular Predicción</button>
+      
+      <div id="resultContainer" class="result-container hidden">
+        <div class="result-title">Tiempo de Respuesta Predicho:</div>
+        <div id="predictionValue" class="result-value">--</div>
+        <div id="inferenceTime" class="inference-time">Tiempo de inferencia: -- µs</div>
+      </div>
+    </div>
+    
+    <!-- Correlation Matrix Tab -->
+    <div id="correlation-tab" class="tab-content">
+      <div class="correlation-container">
+        <h2 class="correlation-title">Matriz de Correlación - Gráficos de Dispersión</h2>
+        
+        <div class="correlation-controls">
+          <button id="loadCorrelationBtn">Cargar Matriz de Correlación</button>
+        </div>
+        
+        <div id="selected-point-info" class="selected-point hidden">
+          <strong>Punto seleccionado:</strong> <span id="point-details"></span>
+        </div>
+        
+        <div class="matrix-container" id="correlation-matrix"></div>
+        
+        <p class="correlation-note">
+          * Use el ratón para hacer clic y arrastrar en cualquier gráfico para seleccionar puntos. Doble clic para restablecer.
+        </p>
+      </div>
+    </div>
+  </div>
+  
+  <script src="background.js"></script>
+  <script src="network-background.js"></script>
+  <script>
+    // Remove WebSocket connection and replace with fetch API
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('Aplicación iniciada');
+      document.getElementById('predictBtn').disabled = false;
+    });
+    
+    // Configurar evento de clic para el botón de predicción usando fetch API
+    document.getElementById('predictBtn').addEventListener('click', async () => {
+      try {
+        // Recolectar valores
+        const nodeNumber = parseFloat(document.getElementById('nodeNumber').value);
+        const threadNumber = parseFloat(document.getElementById('threadNumber').value);
+        const tr = parseFloat(document.getElementById('tr').value);
+        const processorUtilization = parseFloat(document.getElementById('processorUtilization').value);
+        const channelWaitingTime = parseFloat(document.getElementById('channelWaitingTime').value);
+        const inputWaitingTime = parseFloat(document.getElementById('inputWaitingTime').value);
+        const channelUtilization = parseFloat(document.getElementById('channelUtilization').value);
+        const spatialDistribution = document.getElementById('spatialDistribution').value;
+        const temporalDistribution = document.getElementById('temporalDistribution').value;
+        
+        // Mostrar indicador de carga
+        document.getElementById('resultContainer').classList.remove('hidden');
+        document.getElementById('predictionValue').textContent = "Procesando...";
+        document.getElementById('inferenceTime').textContent = "";
+        
+        // Preparar datos para la solicitud
+        const requestData = {
+          nodeNumber,
+          threadNumber,
+          tr,
+          processorUtilization,
+          channelWaitingTime,
+          inputWaitingTime,
+          channelUtilization,
+          spatialDistribution,
+          temporalDistribution
+        };
+        
+        console.log('Enviando petición:', requestData);
+        
+        // Realizar la petición HTTP
+        const response = await fetch('/api/predict', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestData)
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Error HTTP: ${response.status}`);
+        }
+        
+        // Procesar la respuesta
+        const result = await response.json();
+        
+        // Mostrar resultados en la interfaz
+        document.getElementById('resultContainer').classList.remove('hidden');
+        document.getElementById('predictionValue').textContent = result.prediction.toFixed(4);
+        document.getElementById('inferenceTime').textContent = `Tiempo de inferencia: ${result.inferenceTime} µs`;
+        
+      } catch (error) {
+        console.error('Error al realizar la predicción:', error);
+        document.getElementById('predictionValue').textContent = "Error en la predicción";
+        document.getElementById('inferenceTime').textContent = `Error: ${error.message}`;
+      }
+    });
+    
+    // Tab functionality
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Remove active class from all tabs and content
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        // Add active class to clicked tab and corresponding content
+        tab.classList.add('active');
+        const tabId = tab.getAttribute('data-tab');
+        document.getElementById(`${tabId}-tab`).classList.add('active');
+      });
+    });
+  </script>
+  <!-- Add our correlation matrix script -->
+  <script src="correlation-matrix.js"></script>
+</body>
+</html>

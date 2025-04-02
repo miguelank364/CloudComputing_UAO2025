@@ -1,0 +1,67 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  # Configuración para el plugin vagrant-vbguest (opcional)
+  if Vagrant.has_plugin? "vagrant-vbguest"
+    config.vbguest.no_install  = true
+    config.vbguest.auto_update = false
+    config.vbguest.no_remote   = true
+  end
+
+  # Máquina de control (control-node)
+  config.vm.define "control-node" do |control|
+    control.vm.box = "bento/ubuntu-22.04"
+    control.vm.network :private_network, ip: "192.168.50.3"
+    control.vm.hostname = "control-node"
+    
+    control.vm.provider "virtualbox" do |vb|
+      vb.memory = "2048"
+      vb.cpus = 2
+    end
+
+    # Provisionamiento básico (instala Terraform/Ansible si es necesario)
+    control.vm.provision "shell", path: "control.sh"
+
+    # Generar clave SSH en control-node (si no existe)
+    control.vm.provision "shell", inline: <<-SHELL
+      mkdir -p /home/vagrant/.ssh
+      [ -f "/home/vagrant/.ssh/id_rsa" ] || ssh-keygen -t rsa -N "" -f /home/vagrant/.ssh/id_rsa
+      chown -R vagrant:vagrant /home/vagrant/.ssh
+    SHELL
+  end
+
+  # Máquina target (web-node)
+  config.vm.define "web-node" do |web|
+    web.vm.box = "bento/ubuntu-22.04"
+    web.vm.network :private_network, ip: "192.168.50.2"
+    web.vm.hostname = "web-node"
+    
+    web.vm.provider "virtualbox" do |vb|
+      vb.memory = "1024"
+      vb.cpus = 1
+    end
+
+    # Asegurar que SSH esté instalado y accesible
+    web.vm.provision "shell", path: "web.sh"
+    
+    # Configuración SSH para permitir conexiones desde control-node
+    web.vm.provision "shell", inline: <<-SHELL
+      mkdir -p /home/vagrant/.ssh
+      touch /home/vagrant/.ssh/authorized_keys
+      chown -R vagrant:vagrant /home/vagrant/.ssh
+      chmod 700 /home/vagrant/.ssh
+      chmod 600 /home/vagrant/.ssh/authorized_keys
+    SHELL
+  end
+
+  # Configurar SSH entre nodos (ejecutado solo en control-node)
+  config.vm.provision "shell", run: "always", inline: <<-SHELL
+    if [ "$(hostname)" = "control-node" ]; then
+      echo "Configurando conexión SSH a web-node..."
+      ssh-keyscan 192.168.50.2 >> /home/vagrant/.ssh/known_hosts
+      sshpass -p 'vagrant' ssh-copy-id -i /home/vagrant/.ssh/id_rsa.pub -o StrictHostKeyChecking=no vagrant@192.168.50.2
+      echo "¡Conexión SSH configurada correctamente!"
+    fi
+  SHELL
+end

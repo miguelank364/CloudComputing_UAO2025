@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neural-network
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: neural-network
+  template:
+    metadata:
+      labels:
+        app: neural-network
+    spec:
+      containers:
+      - name: api
+        image: miguelank/optical-network-api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+      # Descomenta las siguiente líneas si utilizas un repositorio privado
+      # imagePullSecrets:
+      # - name: regcred
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neural-network-service
+spec:
+  selector:
+    app: neural-network
+  ports:
+  - port: 80
+    targetPort: 8000
+  type: ClusterIP
