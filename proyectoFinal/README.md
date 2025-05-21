@@ -1,5 +1,23 @@
 # Proyecto de Detección de Objetos: Comparación y Evaluación de APIs de Visión Artificial
 
+## Tabla de Contenidos
+
+- [Descripción General del Proyecto](#descripción-general-del-proyecto)
+- [Arquitectura del Sistema Original](#arquitectura-del-sistema-original)
+- [Entorno de Desarrollo con Vagrant](#entorno-de-desarrollo-con-vagrant)
+- [Página Web de Comparación: Características y Capacidades](#página-web-de-comparación-características-y-capacidades)
+- [Integración con APIs Genéricas de Visión Artificial](#integración-con-apis-genéricas-de-visión-artificial)
+- [Flujo de Trabajo del Sistema](#flujo-de-trabajo-del-sistema)
+- [Resultados y Hallazgos Iniciales](#resultados-y-hallazgos-iniciales)
+- [Proyecto de Detección de Objetos: Modelos Personalizados](#proyecto-de-detección-de-objetos-modelos-personalizados)
+- [Guía de Implementación: Google Vertex AI](#guía-de-implementación-google-vertex-ai)
+- [Guía de Implementación: Azure Custom Vision](#guía-de-implementación-azure-custom-vision)
+- [Scripts de Conversión de Formatos](#scripts-de-conversión-de-formatos)
+- [Comparación de Servicios](#comparación-de-servicios)
+- [Consejos para Mejorar la Precisión](#consejos-para-mejorar-la-precisión)
+- [Solución de Problemas Comunes](#solución-de-problemas-comunes)
+- [Recursos Adicionales](#recursos-adicionales)
+
 ## Descripción General del Proyecto
 
 Este proyecto implementa una plataforma web para comparar el rendimiento, precisión y costo de diferentes servicios de visión artificial en tareas de detección de objetos. La solución permite evaluar tanto las APIs genéricas de detección (Google Cloud Vision y Azure Computer Vision) como modelos personalizados (Google Vertex AI y Azure Custom Vision) en este caso entrenados específicamente para componentes electrónicos discretos.
