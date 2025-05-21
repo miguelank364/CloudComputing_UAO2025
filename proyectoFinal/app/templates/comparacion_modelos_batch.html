@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Comparación Batch de Modelos Personalizados</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+</head>
+<body class="container py-4">
+
+<h1>Comparación Batch de Modelos Personalizados</h1>
+
+<div class="alert alert-info">
+  <strong>Mejor modelo en esta comparación:</strong> {{ mejor_modelo }}
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header bg-success text-white">Google Vertex AI</div>
+      <div class="card-body">
+        <table class="table">
+          <tbody>
+            <tr>
+              <td>Total imágenes procesadas:</td>
+              <td><strong>{{ total_imagenes }}</strong></td>
+            </tr>
+            <tr>
+              <td>Total objetos detectados:</td>
+              <td><strong>{{ total_objetos_vertex }}</strong></td>
+            </tr>
+            <tr>
+              <td>Confianza media:</td>
+              <td><strong>{{ "%.2f"|format(confianza_media_vertex) }} %</strong></td>
+            </tr>
+            <tr>
+              <td>Tiempo medio de procesamiento:</td>
+              <td><strong>{{ "%.4f"|format(tiempo_medio_vertex) }} s</strong></td>
+            </tr>
+          </tbody>
+        </table>
+        <hr>
+        <div>
+          <p>💵 Esta ejecución: <strong>${{ costo_run_vertex }}</strong> ({{ modelo_vertex_tarifa }})</p>
+          <p>💰 Acumulado total: <strong>${{ costo_total_vertex }}</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header bg-primary text-white">Azure Custom Vision</div>
+      <div class="card-body">
+        <table class="table">
+          <tbody>
+            <tr>
+              <td>Total imágenes procesadas:</td>
+              <td><strong>{{ total_imagenes }}</strong></td>
+            </tr>
+            <tr>
+              <td>Total objetos detectados:</td>
+              <td><strong>{{ total_objetos_azure }}</strong></td>
+            </tr>
+            <tr>
+              <td>Confianza media:</td>
+              <td><strong>{{ "%.2f"|format(confianza_media_azure) }} %</strong></td>
+            </tr>
+            <tr>
+              <td>Tiempo medio de procesamiento:</td>
+              <td><strong>{{ "%.4f"|format(tiempo_medio_azure) }} s</strong></td>
+            </tr>
+          </tbody>
+        </table>
+        <hr>
+        <div>
+          <p>💵 Esta ejecución: <strong>${{ costo_run_azure }}</strong> ({{ modelo_azure_tarifa }})</p>
+          <p>💰 Acumulado total: <strong>${{ costo_total_azure }}</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Gráficas comparativas -->
+<h3 class="mt-4">Gráficas Comparativas</h3>
+
+<div class="row mb-4">
+  <!-- Objects Detected Chart -->
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">Objetos Detectados</div>
+      <div class="card-body">
+        <canvas id="objectsChart"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Confidence Chart -->
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">Confianza Media (%)</div>
+      <div class="card-body">
+        <canvas id="confidenceChart"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Processing Time Chart -->
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">Tiempo de Procesamiento (s)</div>
+      <div class="card-body">
+        <canvas id="timeChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>Resultados por imagen</h3>
+
+<div class="table-responsive">
+  <table class="table table-striped table-hover">
+    <thead class="table-dark">
+      <tr>
+        <th>Imagen</th>
+        <th>Vertex AI</th>
+        <th>Azure Custom Vision</th>
+        <th>Mejor modelo</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in resultados %}
+      <tr>
+        <td>{{ r.archivo }}</td>
+        <td>
+          <div><img src="{{ url_for('static', filename=r.vertex_img) }}" class="img-thumbnail" style="max-height:150px"></div>
+          <div>Objetos: <strong>{{ r.objetos_vertex }}</strong></div>
+          <div>Confianza: <strong>{{ "%.2f"|format(r.confianza_vertex) }}%</strong></div>
+          <div>Tiempo: <strong>{{ "%.4f"|format(r.tiempo_vertex) }}s</strong></div>
+        </td>
+        <td>
+          <div><img src="{{ url_for('static', filename=r.azure_img) }}" class="img-thumbnail" style="max-height:150px"></div>
+          <div>Objetos: <strong>{{ r.objetos_azure }}</strong></div>
+          <div>Confianza: <strong>{{ "%.2f"|format(r.confianza_azure) }}%</strong></div>
+          <div>Tiempo: <strong>{{ "%.4f"|format(r.tiempo_azure) }}s</strong></div>
+        </td>
+        <td>
+          <span class="badge {% if 'Vertex' in r.mejor_modelo %}bg-success{% else %}bg-primary{% endif %}">
+            {{ r.mejor_modelo }}
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="text-center mt-4">
+  <button id="downloadSummary" class="btn btn-outline-primary me-2">Descargar resumen</button>
+  <button id="downloadChart" class="btn btn-outline-success me-2">Descargar gráfico</button>
+  <a href="{{ url_for('index') }}" class="btn btn-secondary">⬅ Volver</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Common configuration for charts
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top',
+      }
+    }
+  };
+  
+  // Common colors
+  const vertexColor = 'rgba(40, 167, 69, 0.7)';
+  const vertexBorder = 'rgba(40, 167, 69, 1)';
+  const azureColor = 'rgba(0, 123, 255, 0.7)';
+  const azureBorder = 'rgba(0, 123, 255, 1)';
+  
+  // Objects Detected Chart
+  const objectsCtx = document.getElementById('objectsChart');
+  new Chart(objectsCtx, {
+    type: 'bar',
+    data: {
+      labels: ['Objetos Detectados'],
+      datasets: [
+        {
+          label: 'Vertex AI',
+          data: [{{ total_objetos_vertex }}],
+          backgroundColor: vertexColor,
+          borderColor: vertexBorder,
+          borderWidth: 1
+        },
+        {
+          label: 'Azure Custom Vision',
+          data: [{{ total_objetos_azure }}],
+          backgroundColor: azureColor,
+          borderColor: azureBorder,
+          borderWidth: 1
+        }
+      ]
+    },
+    options: chartOptions
+  });
+  
+  // Confidence Chart
+  const confidenceCtx = document.getElementById('confidenceChart');
+  new Chart(confidenceCtx, {
+    type: 'bar',
+    data: {
+      labels: ['Confianza Media (%)'],
+      datasets: [
+        {
+          label: 'Vertex AI',
+          data: [{{ confianza_media_vertex }}],
+          backgroundColor: vertexColor,
+          borderColor: vertexBorder,
+          borderWidth: 1
+        },
+        {
+          label: 'Azure Custom Vision',
+          data: [{{ confianza_media_azure }}],
+          backgroundColor: azureColor,
+          borderColor: azureBorder,
+          borderWidth: 1
+        }
+      ]
+    },
+    options: chartOptions
+  });
+  
+  // Processing Time Chart
+  const timeCtx = document.getElementById('timeChart');
+  new Chart(timeCtx, {
+    type: 'bar',
+    data: {
+      labels: ['Tiempo de Procesamiento (s)'],
+      datasets: [
+        {
+          label: 'Vertex AI',
+          data: [{{ tiempo_medio_vertex }}],
+          backgroundColor: vertexColor,
+          borderColor: vertexBorder,
+          borderWidth: 1
+        },
+        {
+          label: 'Azure Custom Vision',
+          data: [{{ tiempo_medio_azure }}],
+          backgroundColor: azureColor,
+          borderColor: azureBorder,
+          borderWidth: 1
+        }
+      ]
+    },
+    options: chartOptions
+  });
+
+  // Funcionalidad para descargar gráficos
+  document.getElementById('downloadChart').onclick = function() {
+    // Create a temporary canvas to combine all charts
+    const canvas = document.createElement('canvas');
+    canvas.width = 900;
+    canvas.height = 300;
+    const ctx = canvas.getContext('2d');
+    
+    // Set background to white
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw title
+    ctx.fillStyle = 'black';
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Comparación de Modelos Personalizados (Batch)', canvas.width/2, 30);
+    
+    // Draw all three charts side by side
+    const charts = [
+      document.getElementById('objectsChart'),
+      document.getElementById('confidenceChart'), 
+      document.getElementById('timeChart')
+    ];
+    
+    const titles = ['Objetos', 'Confianza (%)', 'Tiempo (s)'];
+    
+    for (let i = 0; i < charts.length; i++) {
+      // Draw subtitle
+      ctx.font = 'bold 14px Arial';
+      ctx.fillText(titles[i], 150 + i * 300, 60);
+      
+      // Draw chart
+      ctx.drawImage(charts[i], i * 300, 70, 300, 200);
+    }
+    
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = 'comparacion_batch_modelos.png';
+    link.click();
+  };
+
+  // Funcionalidad para descargar resumen
+  document.getElementById('downloadSummary').addEventListener('click', function() {
+    const summary = {
+      fecha: new Date().toISOString(),
+      total_imagenes: {{ total_imagenes }},
+      vertex_ai: {
+        objetos_detectados: {{ total_objetos_vertex }},
+        confianza_media: {{ confianza_media_vertex }},
+        tiempo_medio: {{ tiempo_medio_vertex }},
+        costo: "{{ costo_run_vertex }}"
+      },
+      azure_custom_vision: {
+        objetos_detectados: {{ total_objetos_azure }},
+        confianza_media: {{ confianza_media_azure }},
+        tiempo_medio: {{ tiempo_medio_azure }},
+        costo: "{{ costo_run_azure }}"
+      },
+      mejor_modelo: "{{ mejor_modelo }}",
+      resultados_por_imagen: [
+        {% for r in resultados %}
+        {
+          archivo: "{{ r.archivo }}",
+          vertex_ai: {
+            objetos: {{ r.objetos_vertex }},
+            confianza: {{ r.confianza_vertex }},
+            tiempo: {{ r.tiempo_vertex }}
+          },
+          azure_custom_vision: {
+            objetos: {{ r.objetos_azure }},
+            confianza: {{ r.confianza_azure }},
+            tiempo: {{ r.tiempo_azure }}
+          },
+          mejor_modelo: "{{ r.mejor_modelo }}"
+        },
+        {% endfor %}
+      ]
+    };
+    
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(summary, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `comparacion_batch_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  });
+</script>
+</body>
+</html>

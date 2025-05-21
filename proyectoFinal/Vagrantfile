@@ -1,0 +1,67 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# ──────────────────────────────────────────────
+# Vagrantfile – Proyecto Visión Google & Azure
+# ──────────────────────────────────────────────
+Vagrant.configure("2") do |config|
+
+  # Box base
+  config.vm.box      = "bento/ubuntu-20.04"
+  config.vm.hostname = "proyecto"
+
+  # Red privada
+  config.vm.network :private_network, ip: "192.168.90.10"
+
+  # --------------------------
+  # Carpetas sincronizadas
+  # --------------------------
+  config.vm.synced_folder "./app",   "/home/vagrant/app",   create: true
+  config.vm.synced_folder "./creds", "/home/vagrant/creds", create: true
+
+  # --------------------------
+  # Provisionamiento Shell
+  # --------------------------
+  config.vm.provision "shell", privileged: true, inline: <<-SHELL
+    set -e
+
+    # Paquetes base
+    apt-get update -y
+    apt-get install -y python3 python3-venv python3-pip git
+
+    # Entorno virtual
+    python3 -m venv /home/vagrant/venv
+    source /home/vagrant/venv/bin/activate
+
+    # Dependencias Python
+    pip install --upgrade pip
+    pip install flask google-cloud-vision pillow python-dotenv \
+                azure-cognitiveservices-vision-computervision msrest \
+                google-cloud-aiplatform
+
+    deactivate
+
+    # Credenciales Google
+    echo 'export GOOGLE_APPLICATION_CREDENTIALS="/home/vagrant/creds/versatile-cove-460404-r6-b56c4f7864c4.json"' \
+         > /etc/profile.d/gvision.sh
+
+    # Credenciales Azure
+    echo 'export AZURE_VISION_KEY="3aZ5wq9YmbHrYZbbOb4HMYOUH6f9cxU7wZSRaoooMKEAdshDS1J2JQQJ99BEACYeBjFXJ3w3AAAFACOGlyR8"' \
+         > /etc/profile.d/azvision.sh
+    echo 'export AZURE_VISION_ENDPOINT="https://vision-api-azure.cognitiveservices.azure.com/"' \
+         >> /etc/profile.d/azvision.sh
+    chmod +x /etc/profile.d/gvision.sh /etc/profile.d/azvision.sh
+
+    echo "Provisionamiento completo. Para iniciar:"
+    echo "  vagrant ssh"
+    echo "  source /home/vagrant/venv/bin/activate"
+    echo "  cd /home/vagrant/app"
+    echo "  flask --app app run --host=0.0.0.0"
+  SHELL
+
+  # Recursos VirtualBox
+  config.vm.provider "virtualbox" do |v|
+    v.cpus   = 2
+    v.memory = 3072
+  end
+end

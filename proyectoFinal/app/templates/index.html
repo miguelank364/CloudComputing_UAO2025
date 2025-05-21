@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Detección de objetos - Plataforma de comparación</title>
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+</head>
+<body class="container py-4">
+
+  <h1 class="mb-4">Plataforma de análisis de imágenes</h1>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home" type="button" role="tab" aria-controls="home" aria-selected="true">API Comparativa</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="vertex-tab" data-bs-toggle="tab" data-bs-target="#vertex" type="button" role="tab" aria-controls="vertex" aria-selected="false">Comparar modelos personalizados</button>
+    </li>
+  </ul>
+
+  <div class="tab-content" id="myTabContent">
+    
+    <!-- Tab para comparativa Google/Azure -->
+    <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
+      <h3>Comparar Google Vision y Azure Vision</h3>
+      <form method="POST" action="{{ url_for('comparar') }}" enctype="multipart/form-data" class="card p-4 shadow-sm">
+        <div class="mb-3">
+          <label class="form-label">Selecciona una imagen</label>
+          <input type="file" class="form-control" name="image" accept="image/*" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Comparar Google + Azure</button>
+      </form>
+      
+      <hr class="my-4">
+      
+      <h4>¿Evaluar muchas imágenes de una vez?</h4>
+      <a href="{{ url_for('subir_carpeta') }}" class="btn btn-outline-secondary">
+        Subir carpeta para comparación (.zip)
+      </a>
+    </div>
+    
+    <!-- Tab para los modelos personalizados -->
+    <div class="tab-pane fade" id="vertex" role="tabpanel" aria-labelledby="vertex-tab">
+      <h3>Comparación de Modelos Personalizados</h3>
+      <form method="POST" action="{{ url_for('comparar_modelos') }}" enctype="multipart/form-data" class="card p-4 shadow-sm">
+        <div class="mb-3">
+          <label class="form-label">Selecciona una imagen para análisis con modelos personalizados</label>
+          <input type="file" class="form-control" name="image" accept="image/*" required>
+        </div>
+        <div class="alert alert-info">
+          Esta acción comparará el rendimiento de dos modelos personalizados:
+          <ul>
+            <li><strong>Google Vertex AI</strong> (Modelo personalizado)</li>
+            <li><strong>Azure Custom Vision</strong> (Modelo personalizado)</li>
+          </ul>
+        </div>
+        <button type="submit" class="btn btn-success">Comparar Modelos Personalizados</button>
+      </form>
+      
+      <hr class="my-4">
+      
+      <h4>¿Evaluar muchas imágenes de una vez?</h4>
+      <a href="{{ url_for('subir_carpeta_modelos') }}" class="btn btn-outline-success">
+        Subir carpeta para comparar modelos (.zip)
+      </a>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Subir carpeta para Vertex AI</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+</head>
+<body class="container py-4">
+  <h1>Vertex AI - Evaluación por lote</h1>
+  
+  <div class="alert alert-info">
+    Esta opción evaluará todas las imágenes usando el modelo personalizado de Vertex AI.
+  </div>
+
+  <form method="POST" enctype="multipart/form-data" class="card p-4 shadow-sm">
+    <div class="mb-3">
+      <label class="form-label">Selecciona un archivo ZIP con imágenes:</label>
+      <input type="file" class="form-control" name="carpeta_zip" accept=".zip" required>
+    </div>
+
+    <button type="submit" class="btn btn-success">Procesar con Vertex AI</button>
+    <a href="{{ url_for('index') }}" class="btn btn-secondary mt-3">⬅ Volver</a>
+  </form>
+</body>
+</html>
